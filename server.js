@@ -7,7 +7,10 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const File = require('./models/File');
 
-dotenv.config();
+// Load environment variables from .env file
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
