@@ -22,10 +22,6 @@ const FileSchema = new Schema({
     type: Number,
     required: true
   },
-  uploadedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true }); // Adding timestamps to track created and updated times
 
 module.exports = mongoose.model('File', FileSchema);
