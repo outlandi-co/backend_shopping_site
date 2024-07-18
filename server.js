@@ -23,7 +23,10 @@ if (!MONGODB_URI) {
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, UPLOADS_DIR);
@@ -35,6 +38,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(uploadsDir)); // Serve static files
 
+// File filter function to allow specific image extensions
+const fileFilter = (req, file, cb) => {
+  const allowedExtensions = /jpeg|jpg|png/;
+  const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedExtensions.test(file.mimetype);
+
+  if (extname && mimetype) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only images are allowed (jpeg, jpg, png)'));
+  }
+};
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -45,12 +61,16 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB
+});
 
 // Endpoint for file uploads
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    return res.status(400).json({ error: 'No file uploaded or invalid file type' });
   }
 
   // Save file metadata to MongoDB
@@ -82,7 +102,7 @@ app.get('/api/products', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Unhandled error:', err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
