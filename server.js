@@ -7,15 +7,18 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const File = require('./models/File');
 
-// Load environment variables from .env file
-dotenv.config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
-});
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
 const MONGODB_URI = process.env.MONGODB_URI;
+
+// Ensure MONGODB_URI is loaded
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not defined. Please set it in your .env file.');
+  process.exit(1);
+}
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
