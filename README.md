@@ -9,4 +9,4 @@
 - create pricing and other json data of relating to the description of each products
 - add animation affects
 - add content to each page -->
--correcting errors
+-correcting error
