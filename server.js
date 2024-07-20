@@ -16,6 +16,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploads folder
+app.use('/images', express.static(path.join(__dirname, 'images'))); // Serve images folder
 
 // Function to overlay images
 const overlayImage = async (backgroundPath, overlayPath, outputPath) => {

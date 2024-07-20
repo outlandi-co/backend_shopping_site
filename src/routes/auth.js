@@ -11,6 +11,7 @@ router.post('/register', async (req, res) => {
   console.log('Request Body:', req.body); // Log the request body for debugging
 
   if (!username || !password) {
+    console.log('Missing username or password');
     return res.status(400).json({ message: 'Please enter all fields' });
   }
 
@@ -18,6 +19,7 @@ router.post('/register', async (req, res) => {
     const userExists = await User.findOne({ username });
 
     if (userExists) {
+      console.log('User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -48,6 +50,7 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
+    console.log('Missing username or password');
     return res.status(400).json({ message: 'Please enter all fields' });
   }
 
@@ -55,12 +58,14 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ username });
 
     if (!user) {
+      console.log('Invalid credentials - user not found');
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      console.log('Invalid credentials - password mismatch');
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
