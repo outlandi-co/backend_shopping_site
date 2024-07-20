@@ -1,112 +1,30 @@
-const express = require('express');
-const multer = require('multer');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const File = require('./models/File');
+require('dotenv').config(); // Load environment variables from .env file
 
-dotenv.config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const authRoutes = require('./src/routes/auth');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
-const MONGODB_URI = process.env.MONGODB_URI;
 
-// Ensure MONGODB_URI is loaded
-if (!MONGODB_URI) {
-  console.error('MONGODB_URI is not defined. Please set it in your .env file.');
-  process.exit(1);
-}
-
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, UPLOADS_DIR);
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(uploadsDir)); // Serve static files
-
-// File filter function to allow specific image extensions
-const fileFilter = (req, file, cb) => {
-  const allowedExtensions = /jpeg|jpg|png/;
-  const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedExtensions.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Only images are allowed (jpeg, jpg, png)'));
-  }
+const corsOptions = {
+  origin: 'http://localhost:5173',
+  optionsSuccessStatus: 200
 };
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+app.use(cors(corsOptions));
+app.use(bodyParser.json());
+app.use('/api/auth', authRoutes);
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB
-});
+const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Endpoint for file uploads
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded or invalid file type' });
-  }
+console.log('MONGO_URI:', MONGO_URI); // Log MONGO_URI to ensure it's loaded correctly
 
-  // Save file metadata to MongoDB
-  const newFile = new File({
-    filename: req.file.filename,
-    path: `${UPLOADS_DIR}/${req.file.filename}`,
-    originalname: req.file.originalname,
-    mimetype: req.file.mimetype,
-    size: req.file.size,
-  });
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log('MongoDB connection error:', err));
 
-  try {
-    const savedFile = await newFile.save();
-    res.json(savedFile);
-  } catch (error) {
-    console.error('Error saving file metadata:', error);
-    res.status(500).json({ error: 'Error saving file metadata' });
-  }
-});
-
-// Endpoint to get product data
-app.get('/api/products', (req, res) => {
-  const products = [
-    { id: 1, name: 'Shirt', price: 20, image: '/path/to/image1.jpg' },
-    { id: 2, name: 'Hoodie', price: 35, image: '/path/to/image2.jpg' },
-  ];
-  res.json(products);
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
