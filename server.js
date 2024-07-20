@@ -4,20 +4,21 @@ const sharp = require('sharp');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
 const corsOptions = {
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'https://outlandico.netlify.app'],
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploads folder
-app.use('/images', express.static(path.join(__dirname, 'images'))); // Serve images folder
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Function to overlay images
 const overlayImage = async (backgroundPath, overlayPath, outputPath) => {
@@ -64,9 +65,51 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     console.log(`Overlay complete: ${outputPath}`);
 
-    res.status(200).send({ message: 'File uploaded and processed successfully', filePath: outputPath });
+    res.status(200).send({ message: 'File uploaded and processed successfully', filePath: `uploads/${outputPath}` });
   } catch (error) {
     console.error('Error during file upload:', error);
+    res.status(500).send({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// Email sending function
+const sendEmail = async (to, subject, text, attachmentPath) => {
+  let transporter = nodemailer.createTransport({
+    service: 'gmail', // Use your email provider or SMTP server
+    auth: {
+      user: 'your-email@gmail.com', // Replace with your email
+      pass: 'your-email-password'   // Replace with your email password
+    }
+  });
+
+  let info = await transporter.sendMail({
+    from: '"Your Company" <your-email@gmail.com>',
+    to: to,
+    subject: subject,
+    text: text,
+    attachments: [
+      {
+        filename: path.basename(attachmentPath),
+        path: attachmentPath
+      }
+    ]
+  });
+
+  console.log('Message sent: %s', info.messageId);
+};
+
+app.post('/api/send-email', async (req, res) => {
+  const { email, filePath } = req.body;
+
+  if (!email || !filePath) {
+    return res.status(400).send({ message: 'Email and file path are required' });
+  }
+
+  try {
+    await sendEmail(email, 'Your Customized Image', 'Please find your customized image attached.', filePath);
+    res.status(200).send({ message: 'Email sent successfully' });
+  } catch (error) {
+    console.error('Error sending email:', error);
     res.status(500).send({ message: 'Internal Server Error', error: error.message });
   }
 });
