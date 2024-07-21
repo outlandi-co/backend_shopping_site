@@ -10,3 +10,7 @@
 - add animation affects
 - add content to each page -->
 -correcting error
+
+## Solved Issues
+
+- Register and Password solved
