@@ -1,6 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import sharp from 'sharp';
 import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
@@ -12,7 +11,7 @@ import { dirname } from 'path';
 dotenv.config();
 
 import sendEmail from './sendEmail.js';
-import authRoutes from './src/routes/authRoutes.js'; // Ensure this path is correct
+import authRoutes from './src/routes/authRoutes.js';
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -26,14 +25,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Define __dirname for ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes
-app.use('/api/auth', authRoutes); // Ensure this line is present and correct
+app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 3000;
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -44,3 +41,38 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     });
   })
   .catch(err => console.error('MongoDB connection error:', err));
+
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const validMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf', 'image/vnd.adobe.photoshop', 'application/postscript'];
+    if (!validMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({ message: 'Invalid file type' });
+    }
+
+    const outputPath = path.join(__dirname, 'uploads', `processed-${file.filename}`);
+    fs.renameSync(file.path, outputPath);
+
+    await sendEmail({
+      to: 'your-email@example.com',
+      subject: 'New File Uploaded',
+      text: 'A new file has been uploaded by a customer.',
+      attachments: [
+        {
+          filename: file.originalname,
+          path: outputPath
+        }
+      ]
+    });
+
+    res.status(200).json({ message: 'File uploaded and email sent successfully!' });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ message: 'Error uploading file' });
+  }
+});
