@@ -12,6 +12,7 @@ dotenv.config();
 
 import sendEmail from './sendEmail.js';
 import authRoutes from './src/routes/authRoutes.js';
+import Product from './src/models/Product.js';
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -59,7 +60,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     fs.renameSync(file.path, outputPath);
 
     await sendEmail({
-      to: 'your-email@example.com',
+      to: 'outlandico@gmail.com',
       subject: 'New File Uploaded',
       text: 'A new file has been uploaded by a customer.',
       attachments: [
@@ -74,5 +75,31 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ message: 'Error uploading file' });
+  }
+});
+
+// Endpoint to get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Endpoint to create a new product
+app.post('/api/products', upload.array('images', 10), async (req, res) => {
+  try {
+    const { category, name, price, description, quantity, options } = req.body;
+    const images = req.files.map(file => `/uploads/${file.filename}`);
+    
+    const newProduct = new Product({ category, name, price, description, quantity, options: JSON.parse(options), images });
+    await newProduct.save();
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
