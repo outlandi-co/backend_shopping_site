@@ -1,20 +1,23 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
-const sendEmail = async ({ to, subject, text, attachments }) => {
-  let transporter = nodemailer.createTransport({
+dotenv.config();
+
+const sendEmail = async ({ to, subject, text, html }) => {
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+      pass: process.env.EMAIL_PASS
+    }
   });
 
-  let mailOptions = {
+  const mailOptions = {
     from: process.env.EMAIL_USER,
     to,
     subject,
     text,
-    attachments,
+    html // Include HTML content
   };
 
   try {
