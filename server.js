@@ -7,13 +7,17 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import Stripe from 'stripe';
 
 dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY); // Initialize Stripe with secret key
 
 import sendEmail from './sendEmail.js';
 import authRoutes from './src/routes/authRoutes.js';
 import productRoutes from './src/routes/productRoutes.js';
 import membershipRoutes from './src/routes/membershipRoutes.js';
+import paymentRoutes from './src/paymentRoutes/paymentRoutes.js';
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -35,6 +39,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/memberships', membershipRoutes);
+app.use('/api/payments', paymentRoutes);
 
 const PORT = process.env.PORT || 3000;
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -78,31 +83,5 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ message: 'Error uploading file' });
-  }
-});
-
-// Endpoint to get all products
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// Endpoint to create a new product
-app.post('/api/products', upload.array('images', 10), async (req, res) => {
-  try {
-    const { category, name, price, description, quantity, options } = req.body;
-    const images = req.files.map(file => `/uploads/${file.filename}`);
-
-    const newProduct = new Product({ category, name, price, description, quantity, options: JSON.parse(options), images });
-    await newProduct.save();
-    res.status(201).json(newProduct);
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
   }
 });

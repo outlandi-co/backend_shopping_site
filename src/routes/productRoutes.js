@@ -1,9 +1,7 @@
 import express from 'express';
 import Product from '../models/Product.js';
-import multer from 'multer';
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
 
 // Endpoint to get all products
 router.get('/', async (req, res) => {
@@ -17,11 +15,11 @@ router.get('/', async (req, res) => {
 });
 
 // Endpoint to create a new product
-router.post('/', upload.array('images', 10), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { category, name, price, description, quantity, options } = req.body;
     const images = req.files.map(file => `/uploads/${file.filename}`);
-
+    
     const newProduct = new Product({ category, name, price, description, quantity, options: JSON.parse(options), images });
     await newProduct.save();
     res.status(201).json(newProduct);

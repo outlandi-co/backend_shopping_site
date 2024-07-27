@@ -11,6 +11,7 @@
 - add content to each page -->
 - troublshooting login issues that won't disappear after signin
 -correcting error
+- troubleshooting keys
 
 ## Solved Issues
 
