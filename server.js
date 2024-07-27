@@ -12,7 +12,8 @@ dotenv.config();
 
 import sendEmail from './sendEmail.js';
 import authRoutes from './src/routes/authRoutes.js';
-import Product from './src/models/Product.js';
+import productRoutes from './src/routes/productRoutes.js';
+import membershipRoutes from './src/routes/membershipRoutes.js';
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -32,6 +33,8 @@ const __dirname = dirname(__filename);
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/memberships', membershipRoutes);
 
 const PORT = process.env.PORT || 3000;
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -94,7 +97,7 @@ app.post('/api/products', upload.array('images', 10), async (req, res) => {
   try {
     const { category, name, price, description, quantity, options } = req.body;
     const images = req.files.map(file => `/uploads/${file.filename}`);
-    
+
     const newProduct = new Product({ category, name, price, description, quantity, options: JSON.parse(options), images });
     await newProduct.save();
     res.status(201).json(newProduct);
