@@ -1,29 +1,21 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const membershipSchema = new mongoose.Schema({
-  dateStarted: {
-    type: Date,
-    required: true
+  type: { 
+    type: String, 
+    required: true, 
+    enum: ['Basic', 'Premium', 'Ultimate'] // Allowed membership types
   },
-  expirationDate: {
-    type: Date,
-    required: true
+  price: { 
+    type: Number, 
+    required: true 
   },
-  planType: {
-    type: String,
-    required: true
+  duration: { 
+    type: Number, 
+    required: true // Duration in months or another unit
   },
-  userId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  userEmail: {
-    type: String,
-    required: true
-  }
 });
 
 const Membership = mongoose.model('Membership', membershipSchema);
 
-export default Membership;
+module.exports = Membership;

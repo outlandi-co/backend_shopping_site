@@ -1,87 +1,86 @@
-import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import cors from 'cors';
-import fs from 'fs';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import Stripe from 'stripe';
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-dotenv.config();
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY); // Initialize Stripe with secret key
-
-import sendEmail from './sendEmail.js';
-import authRoutes from './src/routes/authRoutes.js';
-import productRoutes from './src/routes/productRoutes.js';
-import membershipRoutes from './src/routes/membershipRoutes.js';
-import paymentRoutes from './src/paymentRoutes/paymentRoutes.js';
+const { protect } = require('./src/middlewares/authMiddleware'); // Import the protect middleware
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+const PORT = process.env.PORT || 3000;
 
-const corsOptions = {
-  origin: ['http://localhost:5173', 'https://outlandico.netlify.app'],
-  optionsSuccessStatus: 200
-};
+// Database connection
+const uri = process.env.MONGODB_URI;
+mongoose.connect(uri)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit the process if MongoDB connection fails
+  });
 
-app.use(cors(corsOptions));
+// Enable CORS
+app.use(cors());
+
+// Middleware to parse JSON and urlencoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Import Routes
+const authRoutes = require('./src/routes/authRoutes');
+const membershipRoutes = require('./src/routes/membershipRoutes');
+const productRoutes = require('./src/routes/productRoutes'); // Import the product routes
+const uploadRoutes = require('./src/routes/uploadRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 
-app.use('/images', express.static(path.join(__dirname, 'images')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Use Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
 app.use('/api/memberships', membershipRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/products', productRoutes); // Use the product routes
+app.use('/api/upload', uploadRoutes);
+app.use('/api/users', userRoutes);
 
-const PORT = process.env.PORT || 3000;
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => console.error('MongoDB connection error:', err));
+// Example route for testing products in the backend
+app.get('/api/products/test', (req, res) => {
+  res.json([
+    {
+      _id: '1',
+      name: 'Test Product 1',
+      description: 'This is a test product',
+      price: 10.99,
+      images: ['https://example.com/test-image1.jpg'],
+    },
+    {
+      _id: '2',
+      name: 'Test Product 2',
+      description: 'This is another test product',
+      price: 15.99,
+      images: ['https://example.com/test-image2.jpg'],
+    },
+  ]);
+});
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-  try {
-    const file = req.file;
+// Test Route for Basic Functionality
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Test route is working' });
+});
 
-    if (!file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
+// Serve static files from the React app (build directory)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
 
-    const validMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf', 'image/vnd.adobe.photoshop', 'application/postscript'];
-    if (!validMimeTypes.includes(file.mimetype)) {
-      return res.status(400).json({ message: 'Invalid file type' });
-    }
+  // Handle any requests that don't match the API routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+}
 
-    const outputPath = path.join(__dirname, 'uploads', `processed-${file.filename}`);
-    fs.renameSync(file.path, outputPath);
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'An unexpected error occurred', error: err.message });
+});
 
-    await sendEmail({
-      to: 'outlandico@gmail.com',
-      subject: 'New File Uploaded',
-      text: 'A new file has been uploaded by a customer.',
-      attachments: [
-        {
-          filename: file.originalname,
-          path: outputPath
-        }
-      ]
-    });
-
-    res.status(200).json({ message: 'File uploaded and email sent successfully!' });
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Error uploading file' });
-  }
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
