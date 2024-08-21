@@ -19,7 +19,12 @@ mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   });
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://outlandico.netlify.app'], // Add your frontend origins here
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 
 // Middleware to parse JSON and urlencoded bodies
 app.use(express.json());
