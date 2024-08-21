@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Database connection
 const uri = process.env.MONGODB_URI;
-mongoose.connect(uri)
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
@@ -28,14 +28,14 @@ app.use(express.urlencoded({ extended: true }));
 // Import Routes
 const authRoutes = require('./src/routes/authRoutes');
 const membershipRoutes = require('./src/routes/membershipRoutes');
-const productRoutes = require('./src/routes/productRoutes'); // Import the product routes
+const productRoutes = require('./src/routes/productRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/memberships', membershipRoutes);
-app.use('/api/products', productRoutes); // Use the product routes
+app.use('/api/products', productRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 
