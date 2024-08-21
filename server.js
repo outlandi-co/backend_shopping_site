@@ -11,7 +11,13 @@ const PORT = process.env.PORT || 3000;
 
 // Database connection
 const uri = process.env.MONGODB_URI;
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+
+if (!uri) {
+  console.error('MONGODB_URI is not defined in environment variables.');
+  process.exit(1); // Exit the process if the URI is not defined
+}
+
+mongoose.connect(uri)
   .then(() => console.log('MongoDB connected'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
