@@ -1,17 +1,30 @@
 const Product = require('../models/Product');
 
+// Get all products with optional pagination
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find();
-    res.json(products);
+    const { page = 1, limit = 10 } = req.query; // Get pagination parameters from the request query
+    const products = await Product.find()
+                                  .limit(limit * 1)
+                                  .skip((page - 1) * limit)
+                                  .exec();
+
+    const count = await Product.countDocuments();
+
+    res.status(200).json({
+      products,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
+    });
   } catch (error) {
+    console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Failed to fetch products', error });
   }
 };
 
+// Add a new product
 exports.addProduct = async (req, res) => {
   const { name, description, price, category } = req.body;
-
   try {
     const product = new Product({ name, description, price, category });
     const savedProduct = await product.save();
@@ -21,10 +34,10 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+// Update an existing product
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, description, price, category } = req.body;
-
   try {
     const updatedProduct = await Product.findByIdAndUpdate(id, { name, description, price, category }, { new: true });
     if (!updatedProduct) {
@@ -36,9 +49,9 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+// Delete a product
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
-
   try {
     const deletedProduct = await Product.findByIdAndDelete(id);
     if (!deletedProduct) {
