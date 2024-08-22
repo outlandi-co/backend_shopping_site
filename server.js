@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const connectDB = require('./src/db'); // Import the connectDB function
 require('dotenv').config();
 
 const { protect } = require('./src/middlewares/authMiddleware'); // Import the protect middleware
@@ -9,20 +9,8 @@ const { protect } = require('./src/middlewares/authMiddleware'); // Import the p
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Database connection
-const uri = process.env.MONGODB_URI;
-
-if (!uri) {
-  console.error('MONGODB_URI is not defined in environment variables.');
-  process.exit(1); // Exit the process if the URI is not defined
-}
-
-mongoose.connect(uri)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1); // Exit the process if MongoDB connection fails
-  });
+// Connect to the database
+connectDB();
 
 // Enable CORS
 app.use(cors({
