@@ -1,6 +1,5 @@
 // ===== server.js =====
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const connectDB = require('./src/db');
 require('dotenv').config();
@@ -10,8 +9,10 @@ const { protect } = require('./src/middlewares/authMiddleware');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Connect to MongoDB
 connectDB();
 
+// CORS configuration
 app.use(cors({
   origin: ['http://localhost:5173', 'https://outlandico.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -19,9 +20,11 @@ app.use(cors({
   credentials: true,
 }));
 
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Routes
 const authRoutes = require('./src/routes/authRoutes');
 const membershipRoutes = require('./src/routes/membershipRoutes');
 const productRoutes = require('./src/routes/productRoutes');
@@ -34,6 +37,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 
+// Test routes
 app.get('/api/products/test', (req, res) => {
   res.json([
     {
@@ -57,19 +61,13 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Test route is working' });
 });
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'build')));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
-}
-
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'An unexpected error occurred', error: err.message });
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
