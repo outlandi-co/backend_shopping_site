@@ -12,13 +12,19 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB
 connectDB();
 
-// CORS configuration
+// CORS configuration (✅ includes Netlify domain)
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://outlandico.netlify.app'],
+  origin: ['http://localhost:5173', 'https://outlandi.netlify.app', 'https://outlandi.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
+// Debug log to verify origin
+app.use((req, res, next) => {
+  console.log('Incoming request origin:', req.headers.origin);
+  next();
+});
 
 // Body parsers
 app.use(express.json());
