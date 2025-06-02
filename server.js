@@ -1,4 +1,3 @@
-// ===== server.js =====
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/db');
@@ -19,19 +18,19 @@ const allowedOrigins = [
   'https://outlandi.com'
 ];
 
-// ✅ CORS middleware to support preflight + credentials
+// ✅ Custom CORS Middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
 
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200); // Preflight support
+    return res.sendStatus(200); // Preflight response
   }
 
   next();
@@ -41,23 +40,17 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Routes
-const authRoutes = require('./src/routes/authRoutes');
-const membershipRoutes = require('./src/routes/membershipRoutes');
-const productRoutes = require('./src/routes/productRoutes');
-const uploadRoutes = require('./src/routes/uploadRoutes');
-const userRoutes = require('./src/routes/userRoutes');
-
-app.use('/api/auth', authRoutes);
-app.use('/api/memberships', membershipRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/users', userRoutes);
+// ✅ API Routes
+app.use('/api/auth', require('./src/routes/authRoutes'));
+app.use('/api/memberships', require('./src/routes/membershipRoutes'));
+app.use('/api/products', require('./src/routes/productRoutes'));
+app.use('/api/upload', require('./src/routes/uploadRoutes'));
+app.use('/api/users', require('./src/routes/userRoutes'));
 
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.stack);
-  res.status(500).json({ message: 'Unexpected error', error: err.message });
+  res.status(500).json({ message: 'Unexpected server error', error: err.message });
 });
 
 // ✅ Start Server
