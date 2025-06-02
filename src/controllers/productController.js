@@ -1,4 +1,4 @@
-// ✅ controllers/productController.js (vendor removed)
+// ✅ controllers/productController.js (updated to support cost and listPrice)
 const Product = require('../models/Product');
 
 exports.getProducts = async (req, res) => {
@@ -26,10 +26,13 @@ exports.getProducts = async (req, res) => {
 exports.addProduct = async (req, res) => {
   try {
     const {
+      vendor,
+      vendors,
       name,
       sku,
       description,
-      price,
+      cost,
+      listPrice,
       image,
       category,
       quantity,
@@ -37,15 +40,18 @@ exports.addProduct = async (req, res) => {
       sizes
     } = req.body;
 
-    if (!name || price == null || quantity == null) {
-      return res.status(400).json({ message: 'Required fields missing (name, price, quantity).' });
+    if (!vendor || !name || cost == null || listPrice == null || quantity == null) {
+      return res.status(400).json({ message: 'Required fields missing (vendor, name, cost, listPrice, quantity).' });
     }
 
     const product = new Product({
+      vendor: vendor.trim(),
+      vendors: Array.isArray(vendors) ? vendors : [],
       name: name.trim(),
       sku: sku?.trim(),
       description: description?.trim(),
-      price: parseFloat(price),
+      cost: parseFloat(cost),
+      listPrice: parseFloat(listPrice),
       image: image?.trim(),
       category: category?.trim(),
       quantity: parseInt(quantity),
