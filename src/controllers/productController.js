@@ -1,16 +1,20 @@
-// ✅ controllers/productController.js (updated to support cost and listPrice)
+// ✅ controllers/productController.js (updated with filter, pagination, sorting)
 const Product = require('../models/Product');
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, vendor, category } = req.query;
+    const filter = {};
 
-    const products = await Product.find()
+    if (vendor) filter.vendor = vendor;
+    if (category) filter.category = category;
+
+    const products = await Product.find(filter)
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
       .exec();
 
-    const count = await Product.countDocuments();
+    const count = await Product.countDocuments(filter);
 
     res.status(200).json({
       products,
@@ -20,6 +24,15 @@ exports.getProducts = async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching products:', error);
     res.status(500).json({ message: 'Failed to fetch products', error: error.message });
+  }
+};
+
+exports.getPublicProducts = async (req, res) => {
+  try {
+    const products = await Product.find({}, 'name description listPrice image category');
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch public products', error: error.message });
   }
 };
 
