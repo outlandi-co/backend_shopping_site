@@ -1,3 +1,4 @@
+// ===== server.js =====
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/db');
@@ -30,7 +31,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200); // Preflight
+    return res.sendStatus(200); // Preflight support
   }
 
   next();
