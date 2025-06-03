@@ -1,40 +1,30 @@
+// routes/userRoutes.js
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const { sendEmail } = require('../controllers/uploadController');
-const sanitize = require('sanitize-filename');
-
 const router = express.Router();
 
-// Configure Multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${sanitize(file.originalname)}`);
-  }
-});
+const {
+  getUserProfile,
+  registerUser,
+  loginUser,
+  forgotPassword,
+  resetPassword
+} = require('../controllers/userController');
 
-const fileFilter = (req, file, cb) => {
-  const fileTypes = /jpeg|jpg|png|psd|ai|eps|svg/;
-  const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = fileTypes.test(file.mimetype);
+const { protect } = require('../middlewares/authMiddleware');
 
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb('Error: Only images are allowed');
-  }
-};
+// ✅ Protected route to get user profile
+router.get('/profile', protect, getUserProfile);
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 1024 * 1024 * 10 },
-  fileFilter: fileFilter
-});
+// ✅ Register a new user
+router.post('/register', registerUser);
 
-// POST / - Handle file uploads and send email
-router.post('/', upload.single('file'), sendEmail);
+// ✅ Login route
+router.post('/login', loginUser);
+
+// ✅ Forgot password: generate reset token
+router.post('/forgot-password', forgotPassword);
+
+// ✅ Reset password using token
+router.post('/reset-password/:token', resetPassword);
 
 module.exports = router;

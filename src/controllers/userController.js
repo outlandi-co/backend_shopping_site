@@ -1,91 +1,136 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-// Controller function to get the user profile
+// ✅ Get user profile (protected route)
 exports.getUserProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.status(200).json(user);
-    } catch (error) {
-        console.error('Error fetching user profile:', error);
-        res.status(500).json({ message: 'Failed to fetch user profile', error: error.message });
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Failed to fetch user profile', error: error.message });
+  }
 };
 
-// Controller function to register a new user
+// ✅ Register a new user
 exports.registerUser = async (req, res) => {
-    const { username, email, password } = req.body;
-    try {
-        let user = await User.findOne({ email });
-        if (user) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
+  const { username, email, password, role } = req.body;
 
-        // Create a new user with hashed password
-        user = new User({
-            username,
-            email,
-            password: await bcrypt.hash(password, 10),
-        });
-
-        console.log('Hashed password during registration:', user.password);
-
-        await user.save();
-
-        // Generate JWT token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: '1h',
-        });
-
-        res.status(201).json({
-            token,
-            user: { id: user._id, username: user.username, email: user.email },
-        });
-    } catch (error) {
-        console.error('Error registering user:', error);
-        res.status(500).json({ message: 'Failed to register user', error: error.message });
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ message: 'User already exists' });
     }
+
+    user = new User({
+      username,
+      email,
+      password: await bcrypt.hash(password, 10),
+      role: role || 'user',
+    });
+
+    await user.save();
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ message: 'Failed to register user', error: error.message });
+  }
 };
 
-// Controller function to log in a user
+// ✅ Log in a user
 exports.loginUser = async (req, res) => {
-    const { username, password } = req.body;
-    console.log('Login attempt:', username);
+  const { username, password } = req.body;
 
-    try {
-        const user = await User.findOne({ username });
-        if (!user) {
-            console.log('User not found:', username);
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-        console.log('Stored password hash:', user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-        // Compare the provided password with the stored hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
-        console.log('Password comparison result:', isMatch);
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-        if (!isMatch) {
-            console.log('Password mismatch for user:', username);
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Failed to log in user', error: error.message });
+  }
+};
 
-        // Generate JWT token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: '1h',
-        });
+// ✅ Forgot Password
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-        console.log('User logged in successfully:', username);
-        res.json({
-            token,
-            user: { id: user._id, username: user.username, email: user.email },
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Failed to log in user', error: error.message });
-    }
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetToken = token;
+    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // You would send an actual email here — for now, just return the link
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+    res.status(200).json({ message: 'Reset link sent', resetLink });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Error processing request', error: error.message });
+  }
+};
+
+// ✅ Reset Password
+exports.resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+
+    await user.save();
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Could not reset password', error: error.message });
+  }
 };

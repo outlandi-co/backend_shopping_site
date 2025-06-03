@@ -120,3 +120,5 @@ exports.deleteProduct = async (req, res) => {
     res.status(400).json({ message: 'Failed to delete product', error: error.message });
   }
 };
+
+

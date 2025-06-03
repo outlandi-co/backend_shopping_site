@@ -1,8 +1,6 @@
-// ✅ routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
 
-// Import controller functions
 const {
   getProducts,
   addProduct,
@@ -10,16 +8,22 @@ const {
   deleteProduct
 } = require('../controllers/productController');
 
-// GET all products (with optional pagination)
+const { protect } = require('../middlewares/authMiddleware');
+const { adminOnly } = require('../middlewares/adminMiddleware');
+
+// GET all products (public)
 router.get('/', getProducts);
 
-// POST a new product (vendor field removed)
-router.post('/', addProduct);
+// POST a new product (admin only)
+router.post('/', protect, adminOnly, addProduct);
 
-// PUT to update an existing product by ID
-router.put('/:id', updateProduct);
+// PUT to update an existing product by ID (admin only)
+router.put('/:id', protect, adminOnly, updateProduct);
 
-// DELETE a product by ID
-router.delete('/:id', deleteProduct);
+// DELETE a product by ID (admin only)
+router.delete('/:id', protect, adminOnly, deleteProduct);
 
 module.exports = router;
+
+
+
