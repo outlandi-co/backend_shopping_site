@@ -6,28 +6,25 @@ const {
   loginUser,
   logoutUser,
   forgotPassword,
+  resetPassword,
   getUserProfile
 } = require('../controllers/authController');
 
 const { protect } = require('../middlewares/authMiddleware');
 
-// ✅ Register a new user
-router.post('/register', registerUser);
+// 📝 User Registration & Authentication
+router.post('/register', registerUser);     // Register
+router.post('/login', loginUser);           // Login
+router.post('/logout', logoutUser);         // Logout
 
-// ✅ Login
-router.post('/login', loginUser);
+// 🔐 Password Recovery
+// TODO: Add rate limiting to prevent abuse
+router.post('/forgot-password', forgotPassword);               // Request reset link
+router.post('/reset-password/:token', resetPassword);          // Reset with token
 
-// ✅ Logout
-router.post('/logout', logoutUser);
-
-// ✅ Forgot password (implement logic inside controller)
-router.post('/forgot-password', forgotPassword);
-
-// ✅ Get current user profile (Protected)
-router.get('/profile', protect, getUserProfile);
-
-// ✅ Check auth status (for frontend token validation)
-router.get('/check-auth', protect, (req, res) => {
+// 👤 User Profile (Protected)
+router.get('/profile', protect, getUserProfile);               // Get current user profile
+router.get('/check-auth', protect, (req, res) => {             // Simple auth status check
   res.status(200).json({ success: true, user: req.user });
 });
 

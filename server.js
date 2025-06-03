@@ -1,10 +1,15 @@
+require('dotenv').config(); // ✅ Load .env first
+
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/db');
-require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ✅ Confirm JWT_SECRET is loaded
+console.log('JWT_SECRET in use:', process.env.JWT_SECRET?.slice(0, 8) + '...');
 
 // ✅ Connect to MongoDB
 connectDB();
@@ -53,11 +58,11 @@ app.get('/api/check-auth', (req, res) => {
   if (!token) return res.status(401).json({ loggedIn: false });
 
   try {
-    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ loggedIn: true, user: decoded });
-  } catch {
-    res.status(401).json({ loggedIn: false });
+    return res.json({ loggedIn: true, user: decoded });
+  } catch (err) {
+    console.error('JWT verify failed:', err.message);
+    return res.status(401).json({ loggedIn: false });
   }
 });
 

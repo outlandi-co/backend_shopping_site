@@ -1,14 +1,13 @@
-
-// models/User.js
+// src/models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, trim: true },
+  email: { type: String, required: true, trim: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'user' },
-  resetToken: String,
-  resetTokenExpiration: Date,
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  resetToken: { type: String }, // ✅ added
+  resetTokenExpiration: { type: Date } // ✅ added
 });
 
 module.exports = mongoose.model('User', userSchema);
