@@ -47,6 +47,20 @@ app.use('/api/products', require('./src/routes/productRoutes'));
 app.use('/api/upload', require('./src/routes/uploadRoutes'));
 app.use('/api/users', require('./src/routes/userRoutes'));
 
+// ✅ Health check for login session
+app.get('/api/check-auth', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ loggedIn: false });
+
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ loggedIn: true, user: decoded });
+  } catch {
+    res.status(401).json({ loggedIn: false });
+  }
+});
+
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.stack);

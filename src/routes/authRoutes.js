@@ -1,21 +1,34 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, logoutUser, forgotPassword, getUserProfile } = require('../controllers/authController');
+
+const {
+  registerUser,
+  loginUser,
+  logoutUser,
+  forgotPassword,
+  getUserProfile
+} = require('../controllers/authController');
+
 const { protect } = require('../middlewares/authMiddleware');
 
-// User registration route
+// ✅ Register a new user
 router.post('/register', registerUser);
 
-// User login route
+// ✅ Login
 router.post('/login', loginUser);
 
-// User logout route
+// ✅ Logout
 router.post('/logout', logoutUser);
 
-// Forgot password route (implement if needed)
+// ✅ Forgot password (implement logic inside controller)
 router.post('/forgot-password', forgotPassword);
 
-// User profile route (protected)
+// ✅ Get current user profile (Protected)
 router.get('/profile', protect, getUserProfile);
+
+// ✅ Check auth status (for frontend token validation)
+router.get('/check-auth', protect, (req, res) => {
+  res.status(200).json({ success: true, user: req.user });
+});
 
 module.exports = router;
