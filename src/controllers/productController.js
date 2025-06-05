@@ -1,124 +1,67 @@
-// ✅ controllers/productController.js (updated with filter, pagination, sorting and normalized response)
+// 🔹 backend: controllers/productController.js
 const Product = require('../models/Product');
 
-exports.getProducts = async (req, res) => {
+// GET all products with pagination support
+const getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, vendor, category } = req.query;
-    const filter = {};
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
 
-    if (vendor) filter.vendor = vendor;
-    if (category) filter.category = category;
+    const total = await Product.countDocuments();
+    const totalPages = Math.ceil(total / limit);
+    const skip = (page - 1) * limit;
 
-    const products = await Product.find(filter)
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit))
-      .exec();
+    const products = await Product.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    const count = await Product.countDocuments(filter);
-
-    res.status(200).json({
+    res.json({
       products,
-      totalPages: Math.ceil(count / limit),
-      currentPage: Number(page)
+      currentPage: page,
+      totalPages
     });
-  } catch (error) {
-    console.error('❌ Error fetching products:', error);
-    res.status(500).json({ message: 'Failed to fetch products', error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-exports.getPublicProducts = async (req, res) => {
+// POST a new product
+const addProduct = async (req, res) => {
   try {
-    const products = await Product.find({}, 'name description listPrice image category');
-    res.status(200).json({ products });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch public products', error: error.message });
+    const newProduct = new Product(req.body);
+    const saved = await newProduct.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 };
 
-exports.addProduct = async (req, res) => {
+// PUT update product by ID
+const updateProduct = async (req, res) => {
   try {
-    const {
-      vendor,
-      vendors,
-      name,
-      sku,
-      description,
-      cost,
-      listPrice,
-      image,
-      category,
-      quantity,
-      colors,
-      sizes
-    } = req.body;
-
-    if (!vendor || !name || cost == null || listPrice == null || quantity == null) {
-      return res.status(400).json({ message: 'Required fields missing (vendor, name, cost, listPrice, quantity).' });
-    }
-
-    const product = new Product({
-      vendor: vendor.trim(),
-      vendors: Array.isArray(vendors) ? vendors : [],
-      name: name.trim(),
-      sku: sku?.trim(),
-      description: description?.trim(),
-      cost: parseFloat(cost),
-      listPrice: parseFloat(listPrice),
-      image: image?.trim(),
-      category: category?.trim(),
-      quantity: parseInt(quantity),
-      colors: Array.isArray(colors) ? colors : [],
-      sizes: Array.isArray(sizes) ? sizes : []
-    });
-
-    const savedProduct = await product.save();
-    res.status(201).json({ product: savedProduct });
-  } catch (error) {
-    console.error('❌ Failed to add product:', error.message);
-    res.status(400).json({
-      message: 'Failed to add product',
-      error: error.message
-    });
+    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: 'Product not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-exports.updateProduct = async (req, res) => {
-  const { id } = req.params;
-
+// DELETE product by ID
+const deleteProduct = async (req, res) => {
   try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedProduct) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    res.json({ product: updatedProduct });
-  } catch (error) {
-    console.error('❌ Failed to update product:', error.message);
-    res.status(400).json({ message: 'Failed to update product', error: error.message });
-  }
-};
-
-exports.deleteProduct = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(id);
-
-    if (!deletedProduct) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
+    const deleted = await Product.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Product not found' });
     res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    console.error('❌ Failed to delete product:', error.message);
-    res.status(400).json({ message: 'Failed to delete product', error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-
+module.exports = {
+  getProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct
+};

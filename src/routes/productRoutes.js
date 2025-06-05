@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
+// ✅ Only one import of the controller methods
 const {
   getProducts,
   addProduct,
@@ -11,19 +12,16 @@ const {
 const { protect } = require('../middlewares/authMiddleware');
 const { adminOnly } = require('../middlewares/adminMiddleware');
 
-// GET all products (public)
+// Public route to get all products
 router.get('/', getProducts);
 
-// POST a new product (admin only)
+// Admin-only route to create a new product
 router.post('/', protect, adminOnly, addProduct);
 
-// PUT to update an existing product by ID (admin only)
+// Admin-only route to update a product by ID
 router.put('/:id', protect, adminOnly, updateProduct);
 
-// DELETE a product by ID (admin only)
+// Admin-only route to delete a product by ID
 router.delete('/:id', protect, adminOnly, deleteProduct);
 
 module.exports = router;
-
-
-

@@ -22,6 +22,7 @@ router.post('/logout', logoutUser);         // Logout
 router.post('/forgot-password', forgotPassword);               // Request reset link
 router.post('/reset-password/:token', resetPassword);          // Reset with token
 
+
 // 👤 User Profile (Protected)
 router.get('/profile', protect, getUserProfile);               // Get current user profile
 router.get('/check-auth', protect, (req, res) => {             // Simple auth status check
