@@ -1,45 +1,30 @@
-const nodemailer = require('nodemailer');
+// src/controllers/uploadController.js
+const path = require('path');
+const ArtworkSubmission = require('../models/ArtworkSubmission'); // create this if you haven't
 
-exports.sendEmail = async (req, res) => {
-  const file = req.file;
-
-  if (!file) {
-    return res.status(400).json({ message: 'No file uploaded' });
-  }
-
+// ✅ Upload Artwork and optionally save to DB
+const uploadArtwork = async (req, res) => {
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'Gmail', // Replace with your email service provider if different
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+    const file = req.file;
+    const { productId } = req.body;
+
+    if (!file || !productId) {
+      return res.status(400).json({ message: 'Missing file or productId' });
+    }
+
+    const newSubmission = await ArtworkSubmission.create({
+      productId,
+      imageUrl: `/uploads/artworks/${file.filename}`,
+      status: 'pending',
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: process.env.RECEIVER_EMAIL,
-      subject: 'File Upload',
-      text: 'A new file has been uploaded.',
-      attachments: [
-        {
-          filename: file.originalname,
-          path: file.path
-        }
-      ]
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ message: 'Failed to send email', error: error.message });
-      } else {
-        console.log('Email sent:', info.response);
-        res.status(200).json({ message: 'Email sent successfully', info: info.response });
-      }
-    });
+    res.status(200).json({ message: '✅ Artwork submitted', data: newSubmission });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    console.error('❌ Upload failed:', error.message);
+    res.status(500).json({ message: 'Upload failed', error: error.message });
   }
+};
+
+module.exports = {
+  uploadArtwork
 };

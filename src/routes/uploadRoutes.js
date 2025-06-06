@@ -1,30 +1,58 @@
-// routes/userRoutes.js
+
+// routes/uploadRoutes.js
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
+const Artwork = require('../models/Artwork');
 
-const {
-  getUserProfile,
-  registerUser,
-  loginUser,
-  forgotPassword,
-  resetPassword
-} = require('../controllers/userController');
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = 'uploads/artworks';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
 
-const { protect } = require('../middlewares/authMiddleware');
+const upload = multer({ storage });
 
-// ✅ Protected route to get user profile
-router.get('/profile', protect, getUserProfile);
+router.post('/upload-artwork', upload.single('artwork'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-// ✅ Register a new user
-router.post('/register', registerUser);
+  try {
+    const newArtwork = new Artwork({
+      productId: req.body.productId || null,
+      filePath: req.file.path,
+      originalName: req.file.originalname,
+    });
 
-// ✅ Login route
-router.post('/login', loginUser);
+    await newArtwork.save();
 
-// ✅ Forgot password: generate reset token
-router.post('/forgot-password', forgotPassword);
+    res.status(200).json({
+      message: '✅ Artwork uploaded successfully',
+      artwork: newArtwork,
+    });
+  } catch (error) {
+    console.error('❌ Upload error:', error);
+    res.status(500).json({ message: 'Upload failed' });
+  }
+});
 
-// ✅ Reset password using token
-router.post('/reset-password/:token', resetPassword);
+router.get('/artworks', async (req, res) => {
+  try {
+    const artworks = await Artwork.find().populate('productId', 'name sku');
+    res.json(artworks);
+  } catch (error) {
+    console.error('❌ Fetch error:', error);
+    res.status(500).json({ message: 'Fetch failed' });
+  }
+});
 
 module.exports = router;

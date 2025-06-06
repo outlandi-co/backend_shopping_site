@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 
 const {
   registerUser,
@@ -12,16 +13,29 @@ const {
 
 const { protect } = require('../middlewares/authMiddleware');
 
+// 🔐 Rate Limiter for Login Attempts
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit to 5 requests per window per IP
+  message: {
+    message: 'Too many login attempts. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // 📝 User Registration & Authentication
-router.post('/register', registerUser);     // Register
-router.post('/login', loginUser);           // Login
-router.post('/logout', logoutUser);         // Logout
+router.post('/register', registerUser);               // Register (consider removing for admin)
+router.post('/login', loginRateLimiter, loginUser);   // Login with rate limiter
+router.post('/logout', logoutUser);                   // Logout
+router.post('/reset-password/test/:token', (req, res) => {
+  res.json({ msg: '✅ Reset password route is working!', token: req.params.token });
+});
+
 
 // 🔐 Password Recovery
-// TODO: Add rate limiting to prevent abuse
 router.post('/forgot-password', forgotPassword);               // Request reset link
-router.post('/reset-password/:token', resetPassword);          // Reset with token
-
+router.post('/reset-password/:token', resetPassword);          // ✅ Correct route
 
 // 👤 User Profile (Protected)
 router.get('/profile', protect, getUserProfile);               // Get current user profile

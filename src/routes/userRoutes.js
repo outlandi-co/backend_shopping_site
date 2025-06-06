@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+
 const {
   getUserProfile,
   registerUser,
@@ -14,16 +15,16 @@ const {
 const { protect } = require('../middlewares/authMiddleware');
 const { adminOnly } = require('../middlewares/adminMiddleware');
 
-// Public
+// Public Routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 
-// Protected
+// Protected Route
 router.get('/profile', protect, getUserProfile);
 
-// Admin-only
+// Admin Routes
 router.get('/admin/users', protect, adminOnly, getAllUsers);
 router.put('/admin/users/:id', protect, adminOnly, updateUser);
 router.delete('/admin/users/:id', protect, adminOnly, deleteUser);

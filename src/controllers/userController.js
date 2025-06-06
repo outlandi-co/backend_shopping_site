@@ -2,6 +2,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 // 🔐 Get current user's profile
 exports.getUserProfile = async (req, res) => {
@@ -35,11 +36,11 @@ exports.registerUser = async (req, res) => {
 
     await newUser.save();
 
-const token = jwt.sign(
-  { userId: newUser._id, role: newUser.role },
-  process.env.JWT_SECRET,
-  { expiresIn: '1h' }
-);
+    const token = jwt.sign(
+      { userId: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     res.status(201).json({
       token,
@@ -67,11 +68,11 @@ exports.loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-const token = jwt.sign(
-  { userId: user._id, role: user.role },
-  process.env.JWT_SECRET,
-  { expiresIn: '1h' }
-);
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     res.status(200).json({
       token,
@@ -90,23 +91,31 @@ const token = jwt.sign(
 
 // 📧 Forgot password (send reset link)
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
   try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    console.log('🟢 forgotPassword controller hit'); // 👈 Add this line
 
-    const token = crypto.randomBytes(32).toString('hex');
-    user.resetToken = token;
-    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour
-    await user.save();
+    const { email } = req.body;
+    const user = await User.findOne({ email });
 
-    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
-    // TODO: Send email with resetLink
-    res.status(200).json({ message: 'Reset link sent', resetLink });
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Error processing request', error: error.message });
+    if (!user) {
+      console.log('🔴 No user found with email:', email);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+    await sendEmail(
+      user.email,
+      'Reset your password',
+      `<p>Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+    );
+
+    console.log('✅ Password reset email sent');
+    res.json({ message: 'Password reset link sent to your email.' });
+  } catch (err) {
+    console.error('❌ Forgot password error (server):', err); // 👈 Critical to see this
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 

@@ -3,6 +3,7 @@ require('dotenv').config(); // ✅ Load .env early
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 const connectDB = require('./src/db');
 
 const authRoutes = require('./src/routes/authRoutes');
@@ -14,21 +15,20 @@ const userRoutes = require('./src/routes/userRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ Confirm JWT is loaded
+// ✅ Show JWT for confirmation
 console.log('JWT_SECRET in use:', process.env.JWT_SECRET?.slice(0, 8) + '...');
 
 // ✅ Connect to MongoDB
 connectDB();
 
-// ✅ CORS Settings
+// ✅ CORS
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://outlandi.netlify.app',
   'https://admin-outlandi.netlify.app',
-  'https://outlandi.com'
+  'https://outlandi.com',
 ];
-
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -37,7 +37,6 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -46,18 +45,22 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Mount Routes
-app.use('/api/auth', authRoutes);
+// ✅ Static serving for uploads (including artwork)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ Routes
+app.use('/api/auth', require('./src/routes/authRoutes'));
+
+
 app.use('/api/memberships', membershipRoutes);
-app.use('/api/products', productRoutes); // ✅ keep only one
-app.use('/api/upload', uploadRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/upload', uploadRoutes); // includes GET /artworks + POST /upload-artwork
 app.use('/api/users', userRoutes);
 
-// ✅ Check token health route
+// ✅ Auth health check route
 app.get('/api/check-auth', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ loggedIn: false });
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     res.json({ loggedIn: true, user: decoded });
@@ -67,13 +70,13 @@ app.get('/api/check-auth', (req, res) => {
   }
 });
 
-// ✅ Global error handler
+// ✅ Error handler
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.stack);
   res.status(500).json({ message: 'Unexpected server error', error: err.message });
 });
 
-// ✅ Start server
+// ✅ Server start
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
