@@ -48,13 +48,14 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ Static serving for uploads (including artwork)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ Routes
-app.use('/api/auth', require('./src/routes/authRoutes'));
+// ✅ Static serving for frontend build (adjust 'dist' if needed)
+app.use(express.static(path.join(__dirname, 'dist')));
 
-
+// ✅ API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/memberships', membershipRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/upload', uploadRoutes); // includes GET /artworks + POST /upload-artwork
+app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 
 // ✅ Auth health check route
@@ -67,6 +68,19 @@ app.get('/api/check-auth', (req, res) => {
   } catch (err) {
     console.error('JWT verify failed:', err.message);
     res.status(401).json({ loggedIn: false });
+  }
+});
+
+// ✅ SPA Fallback: send index.html for non-API/non-upload routes
+app.get('*', (req, res, next) => {
+  // Only handle non-API, non-upload routes
+  if (
+    !req.path.startsWith('/api') &&
+    !req.path.startsWith('/uploads')
+  ) {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  } else {
+    next();
   }
 });
 
